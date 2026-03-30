@@ -3,3 +3,5 @@
 /.direnv/
 /.idea/
 .env
+.envrc
+/JobTracker
