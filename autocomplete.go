@@ -14,12 +14,15 @@ import (
 	"golang.org/x/net/html"
 )
 
+// skipTags lists HTML elements whose content is irrelevant to job postings.
+// Skipping them reduces noise and token count sent to the LLM.
 var skipTags = map[string]bool{
 	"script": true, "style": true, "svg": true, "img": true,
 	"nav": true, "footer": true, "header": true, "noscript": true,
 	"iframe": true, "meta": true, "link": true,
 }
 
+// JobPosting holds structured data extracted from a job listing page.
 type JobPosting struct {
 	Title        string
 	Company      string
@@ -33,14 +36,17 @@ type JobPosting struct {
 	URL          string
 }
 
-// AutoFill the job posting data from the HTML of a user-provided URL using the Ollama API
+// AutoFill scrapes the page at url, sends its cleaned text to a local Ollama
+// model, and returns a populated JobPosting. model should be an Ollama model
+// name (e.g. "llama3:8b", "mistral:7b").
 func AutoFill(url string, model string) (autoFilled JobPosting, err error) {
 	client, err := api.ClientFromEnvironment()
 	if err != nil {
 		return JobPosting{}, err
 	}
+	// 3-minute ceiling covers slow LLM inference on large pages.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel() // always defer — frees resources even if timeout isn't hit
+	defer cancel()
 
 	prompt := fmt.Sprintf(`You are a data extraction assistant. Extract structured job posting data from the HTML below.
 
@@ -68,6 +74,7 @@ HTML:
 		Stream: new(false),
 	}
 
+	// client.Generate streams responses; with Stream=false we get one final chunk.
 	var fullResponse string
 	err = client.Generate(ctx, req, func(resp api.GenerateResponse) error {
 		fullResponse = resp.Response
@@ -87,6 +94,9 @@ HTML:
 	return jp, nil
 }
 
+// scrapeJS navigates to url in a headless Chromium instance and returns the
+// rendered inner HTML of <body>. Using a real browser ensures JavaScript-heavy
+// job boards (LinkedIn, Greenhouse, etc.) are fully rendered before extraction.
 func scrapeJS(url string) string {
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -99,21 +109,20 @@ func scrapeJS(url string) string {
 	defer cancel()
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
+	// Hard cap so a hanging page doesn't block the whole program.
 	ctx, cancel = context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
 	var content string
 	err := chromedp.Run(ctx,
 		chromedp.ActionFunc(func(ctx context.Context) error {
+			// Separate shorter timeout for navigation only — don't wait
+			// 2 minutes just because the page is slow to respond.
 			navCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 			defer cancel()
-			err := chromedp.Navigate(url).Do(navCtx)
-			if err != nil {
-				return err
-			} //nolint
-			return nil
+			return chromedp.Navigate(url).Do(navCtx)
 		}),
-		chromedp.Sleep(4*time.Second),
+		chromedp.Sleep(4*time.Second), // wait for JS to finish rendering
 		chromedp.InnerHTML("body", &content),
 	)
 	if err != nil {
@@ -122,6 +131,8 @@ func scrapeJS(url string) string {
 	return content
 }
 
+// cleanHTML parses raw HTML, strips non-content tags, extracts visible text,
+// and truncates to ~4000 characters to stay within local model context limits.
 func cleanHTML(raw string) string {
 	doc, err := html.Parse(strings.NewReader(raw))
 	if err != nil {
@@ -131,8 +142,9 @@ func cleanHTML(raw string) string {
 	var buf bytes.Buffer
 	var walk func(*html.Node)
 	walk = func(n *html.Node) {
+		// Skip entire subtrees for tags that carry no useful text.
 		if n.Type == html.ElementNode && skipTags[n.Data] {
-			return // skip this node and all its children
+			return
 		}
 		if n.Type == html.TextNode {
 			text := strings.TrimSpace(n.Data)
