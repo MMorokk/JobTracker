@@ -22,8 +22,8 @@
 ```
 
 > **This project is currently broken and has not yet reached a first fully working version.**
-> The code compiles but is incomplete — the database is not wired up, features are stubbed out,
-> and the app uses hardcoded dummy data instead of real persistence.
+> The database is wired up and the table view reads from SQLite, but adding/editing entries
+> and the URL autofill flow are not yet implemented.
 
 ---
 
@@ -31,13 +31,17 @@
 
 A terminal UI (TUI) app for tracking job applications, written in Go. Paste a job posting URL and let it automatically fill in the details for you.
 
-## Planned Features
+## Features
 
-- **TUI table view** — browse all your applications in a scrollable, sortable table right in your terminal
+- **TUI table view** — browse all your applications in a scrollable table right in your terminal, showing role, company, location, and status
+- **SQLite persistence** — all applications stored locally in a single `jobtracker.db` file via `modernc.org/sqlite` (no CGO required)
+- **Application statuses** — track where each application stands: Applied, Interview, Offer, Rejected, Ghosted
+
+## Planned
+
 - **URL autofill** — paste a job posting URL and have the app scrape and parse it automatically using a headless browser (Chromium via `chromedp`)
 - **Local LLM extraction** — job page text is sent to a locally running [Ollama](https://ollama.com) model, which extracts structured fields (title, company, location, type, salary, requirements, etc.) without any data leaving your machine
-- **SQLite persistence** — all applications stored locally in a single SQLite file via `modernc.org/sqlite` (no CGO required)
-- **Application statuses** — track where each application stands: Applied, Interview, Offer, Rejected, Ghosted
+- **Add / edit entries** — forms for creating and updating job applications
 
 ## Tech Stack
 
@@ -55,7 +59,6 @@ A terminal UI (TUI) app for tracking job applications, written in Go. Paste a jo
 |---|---|
 | `j` / `↓` | Move cursor down |
 | `k` / `↑` | Move cursor up |
-| `1`–`4` | Sort by column (ID, Company, Role, Status) |
 | `q` / `Ctrl+C` | Quit |
 
 ## Prerequisites
