@@ -1,8 +1,6 @@
 package main
 
 import (
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -11,11 +9,6 @@ import (
 type Column struct {
 	Title string
 	Width int
-}
-
-type Status struct {
-	Name  string
-	Color string
 }
 
 var (
@@ -31,24 +24,20 @@ var (
 )
 
 type Table struct {
-	cols    []Column
-	rows    [][]string
-	cursor  int
-	sortCol int
-	sortAsc bool
-	sorted  bool
-	height  int
-	width   int
-	offset  int
+	cols   []Column
+	rows   [][]string
+	cursor int
+	height int
+	width  int
+	offset int
 }
 
 func NewTable(cols []Column, rows [][]string, width, height int) Table {
 	return Table{
-		cols:    cols,
-		rows:    rows,
-		width:   width,
-		height:  height,
-		sortAsc: true,
+		cols:   cols,
+		rows:   rows,
+		width:  width,
+		height: height,
 	}
 }
 
@@ -70,31 +59,6 @@ func (t *Table) MoveDown() {
 	}
 }
 
-func (t *Table) SortByCol(col int) {
-	if t.sorted && t.sortCol == col {
-		t.sortAsc = !t.sortAsc
-	} else {
-		t.sortCol = col
-		t.sortAsc = true
-		t.sorted = true
-	}
-	sort.SliceStable(t.rows, func(i, j int) bool {
-		a, b := t.rows[i][col], t.rows[j][col]
-		an, aerr := strconv.Atoi(a)
-		bn, berr := strconv.Atoi(b)
-		if aerr == nil && berr == nil {
-			if t.sortAsc {
-				return an < bn
-			}
-			return an > bn
-		}
-		if t.sortAsc {
-			return a < b
-		}
-		return a > b
-	})
-}
-
 func (t *Table) SetSize(width, height int) {
 	t.height = height
 	t.width = width
@@ -111,16 +75,8 @@ func (t *Table) View() string {
 	var b strings.Builder
 
 	// header
-	for i, col := range t.cols {
-		indicator := " "
-		if t.sorted && i == t.sortCol {
-			if t.sortAsc {
-				indicator = "▲"
-			} else {
-				indicator = "▼"
-			}
-		}
-		b.WriteString(headerStyle.Width(col.Width).Render(col.Title + indicator))
+	for _, col := range t.cols {
+		b.WriteString(headerStyle.Width(col.Width).Render(col.Title))
 	}
 	b.WriteString("\n")
 	b.WriteString(strings.Repeat("─", t.width) + "\n")

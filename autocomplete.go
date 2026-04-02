@@ -54,12 +54,16 @@ Return ONLY a valid JSON object — no markdown, no explanation, no code fences.
 
 Schema:
 {
-  "title": "short job title (strip unneeded words)",
+  "title": "short job title (strip unneeded words: Junior IT Specialist (m/f/d) > J. IT Specialist; Intern Software Engineer - Quality Assurance > Intern Software Engineer QA), ",
   "company": "company name",
   "location": "city, country (use office location even if role is remote, if city is not known, write only country)",
-  "type": "full-time | part-time | internship | freelance | contract",
-	"workingMode": "remote | hybrid | in-office",
-  "salary": "salary range or null",
+  "type": "full-time | part-time | internship | freelance | b2b",
+	"working_mode": "remote | hybrid | in-office",
+  "salary_min": "salary ranges minimum value or null",
+	"salary_max": "salary ranges maximum value or null",
+	"salary_type": "one of: 'monthly', 'hourly', 'annual', or null",
+	"salary_currency": "salary ranges currency code using ISO 4217 or null"
+	"salary_is_gross": "boolean: true if salary is gross/brutto, false if salary is net/netto"
   "description": "full job description text",
   "summary": "2-3 sentence summary of the role written by you",
   "requirements": ["requirement 1", "requirement 2", "..."]
