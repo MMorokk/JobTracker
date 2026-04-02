@@ -6,3 +6,4 @@
 .envrc
 /JobTracker
 /shell.nix
+/jobtracker.db*
