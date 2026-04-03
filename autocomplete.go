@@ -40,13 +40,13 @@ type JobPosting struct {
 	URL            string   `json:"url"`
 }
 
-// AutoFill scrapes the page at url, sends its cleaned text to a local Ollama
-// model, and returns a populated JobPosting. model should be an Ollama model
+// Fill scrapes the page at url, sends its cleaned text to a local Ollama
+// model, and populates the JobPosting. model should be an Ollama model
 // name (e.g. "llama3:8b", "mistral:7b").
-func AutoFill(url string, model string) (autoFilled JobPosting, err error) {
+func (jp *JobPosting) Fill(url string, model string) error {
 	client, err := api.ClientFromEnvironment()
 	if err != nil {
-		return JobPosting{}, err
+		return err
 	}
 	// 3-minute ceiling covers slow LLM inference on large pages.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
@@ -74,7 +74,7 @@ Schema:
 }
 
 HTML:
-%v`, cleanHTML(scrapeJS(url)))
+%v`, jp.cleanHTML(jp.scrapeJS(url)))
 	//println(prompt)
 	req := &api.GenerateRequest{
 		Model:  model,
@@ -89,23 +89,22 @@ HTML:
 		return nil
 	})
 	if err != nil {
-		return JobPosting{}, err
+		return err
 	}
 
-	var jp JobPosting
-	err = json.Unmarshal([]byte(fullResponse), &jp)
+	err = json.Unmarshal([]byte(fullResponse), jp)
 	if err != nil {
-		return JobPosting{}, err
+		return err
 	}
 
 	jp.URL = url
-	return jp, nil
+	return nil
 }
 
 // scrapeJS navigates to url in a headless Chromium instance and returns the
 // rendered inner HTML of <body>. Using a real browser ensures JavaScript-heavy
 // job boards (LinkedIn, Greenhouse, etc.) are fully rendered before extraction.
-func scrapeJS(url string) string {
+func (jp *JobPosting) scrapeJS(url string) string {
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
 			chromedp.Flag("no-sandbox", true),
@@ -141,7 +140,7 @@ func scrapeJS(url string) string {
 
 // cleanHTML parses raw HTML, strips non-content tags, extracts visible text,
 // and truncates to ~4000 characters to stay within local model context limits.
-func cleanHTML(raw string) string {
+func (jp *JobPosting) cleanHTML(raw string) string {
 	doc, err := html.Parse(strings.NewReader(raw))
 	if err != nil {
 		return raw
