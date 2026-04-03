@@ -24,16 +24,20 @@ var skipTags = map[string]bool{
 
 // JobPosting holds structured data extracted from a job listing page.
 type JobPosting struct {
-	Title        string
-	Company      string
-	Location     string
-	Type         string
-	WorkingMode  string
-	Salary       string
-	Description  string
-	Summary      string
-	Requirements []string
-	URL          string
+	Title          string   `json:"title"`
+	Company        string   `json:"company"`
+	Location       string   `json:"location"`
+	Type           string   `json:"type"`
+	WorkingMode    string   `json:"working_mode"`
+	SalaryMin      float32  `json:"salary_min"`
+	SalaryMax      float32  `json:"salary_max"`
+	SalaryType     string   `json:"salary_type"`
+	SalaryCurrency string   `json:"salary_currency"`
+	SalaryIsGross  bool     `json:"salary_is_gross"`
+	Description    string   `json:"description"`
+	Summary        string   `json:"summary"`
+	Requirements   []string `json:"requirements"`
+	URL            string   `json:"url"`
 }
 
 // AutoFill scrapes the page at url, sends its cleaned text to a local Ollama
@@ -59,10 +63,10 @@ Schema:
   "location": "city, country (use office location even if role is remote, if city is not known, write only country)",
   "type": "full-time | part-time | internship | freelance | b2b",
 	"working_mode": "remote | hybrid | in-office",
-  "salary_min": "salary ranges minimum value or null",
-	"salary_max": "salary ranges maximum value or null",
+  "salary_min": "float value salary ranges minimum value or null",
+	"salary_max": "float value salary ranges maximum value or null",
 	"salary_type": "one of: 'monthly', 'hourly', 'annual', or null",
-	"salary_currency": "salary ranges currency code using ISO 4217 or null"
+	"salary_currency": "salary ranges currency code using ISO 4217 or null",
 	"salary_is_gross": "boolean: true if salary is gross/brutto, false if salary is net/netto"
   "description": "full job description text",
   "summary": "2-3 sentence summary of the role written by you",
