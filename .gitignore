@@ -7,3 +7,4 @@
 /JobTracker
 /shell.nix
 /jobtracker.db*
+/jobs.db*
