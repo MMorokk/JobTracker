@@ -1,4 +1,7 @@
-package main
+// Package ollama provides job-posting autofill via a local Ollama model.
+// It scrapes a URL with a headless browser, strips non-content HTML,
+// and asks the LLM to return structured JSON matching the Job schema.
+package ollama
 
 import (
 	"bytes"
@@ -22,8 +25,8 @@ var skipTags = map[string]bool{
 	"iframe": true, "meta": true, "link": true,
 }
 
-// JobPosting holds structured data extracted from a job listing page.
-type JobPosting struct {
+// Job holds structured data extracted from a job listing page.
+type Job struct {
 	Title          string   `json:"title"`
 	Company        string   `json:"company"`
 	Location       string   `json:"location"`
@@ -41,9 +44,9 @@ type JobPosting struct {
 }
 
 // Fill scrapes the page at url, sends its cleaned text to a local Ollama
-// model, and populates the JobPosting. model should be an Ollama model
+// model, and populates the Job. model should be an Ollama model
 // name (e.g. "llama3:8b", "mistral:7b").
-func (jp *JobPosting) Fill(url string, model string) error {
+func (jp *Job) Fill(url string, model string) error {
 	client, err := api.ClientFromEnvironment()
 	if err != nil {
 		return err
@@ -104,7 +107,7 @@ HTML:
 // scrapeJS navigates to url in a headless Chromium instance and returns the
 // rendered inner HTML of <body>. Using a real browser ensures JavaScript-heavy
 // job boards (LinkedIn, Greenhouse, etc.) are fully rendered before extraction.
-func (jp *JobPosting) scrapeJS(url string) string {
+func (jp *Job) scrapeJS(url string) string {
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
 			chromedp.Flag("no-sandbox", true),
@@ -140,7 +143,7 @@ func (jp *JobPosting) scrapeJS(url string) string {
 
 // cleanHTML parses raw HTML, strips non-content tags, extracts visible text,
 // and truncates to ~4000 characters to stay within local model context limits.
-func (jp *JobPosting) cleanHTML(raw string) string {
+func (jp *Job) cleanHTML(raw string) string {
 	doc, err := html.Parse(strings.NewReader(raw))
 	if err != nil {
 		return raw
