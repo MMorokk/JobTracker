@@ -3,6 +3,7 @@
 package pages
 
 import (
+	"fmt"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -40,6 +41,9 @@ var (
 			Bold(true).
 			Foreground(lipgloss.Color("63"))
 
+	countStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240"))
+
 	selectedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("229")).
 			Background(lipgloss.Color("21"))
@@ -59,13 +63,19 @@ func NewTable(db *db.DB, cols []Column, width, height int) *Table {
 		cols:       cols,
 		width:      width,
 		height:     height,
-		rowsHeight: max(height-3, 0),
+		rowsHeight: max(height-6, 0),
 	}
 }
 
-// UpdateColumnWidths recalculates column widths based on current content and
-// terminal width. Column 0 (ID) gets only its natural content width plus
-// padding. The remaining space is distributed evenly among the other columns.
+/*
+UpdateColumnWidths recalculates column widths based on current content and
+terminal width. Column 0 (ID) gets only its natural content width plus
+padding. The remaining space is distributed evenly among the other columns.
+
+Each row inside the box occupies: 2 (cursor "› "/spaces) + sum(col widths)
++ (numCols-1)*2 (the "| " separators between columns). That total must fit
+within innerWidth = t.width - 2 (the two │ border characters).
+*/
 func (t *Table) UpdateColumnWidths() {
 	if len(t.cols) == 0 {
 		return
@@ -82,8 +92,12 @@ func (t *Table) UpdateColumnWidths() {
 	// col 0 (ID) stays at its natural min width plus padding
 	t.cols[0].Width = minWidths[0] + padding
 
-	// distribute remaining space evenly among the other columns
-	remaining := t.width - t.cols[0].Width
+	// innerWidth = t.width - 2 for the two │ border chars
+	// per-row overhead = 2 (cursor prefix) + (numCols-1)*2 (separators)
+	innerWidth := t.width - 2
+	overhead := 2 + (len(t.cols)-1)*2
+	remaining := innerWidth - overhead - t.cols[0].Width
+
 	otherCount := len(t.cols) - 1
 	minSum := 0
 	for i := 1; i < len(t.cols); i++ {
@@ -129,7 +143,7 @@ func (t *Table) MoveDown() {
 func (t *Table) SetSize(width, height int) {
 	t.height = height
 	t.width = width
-	t.rowsHeight = max(height-3, 0)
+	t.rowsHeight = max(height-6, 0)
 }
 
 // SelectedRow returns the data for the currently highlighted row, or nil if
@@ -175,11 +189,20 @@ func (t *Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (t *Table) View() tea.View {
 	var b strings.Builder
 
-	for _, col := range t.cols {
-		b.WriteString(headerStyle.Width(col.Width).Render(col.Title))
+	// ── Title bar ────────────────────────────────────────────────────────────
+	title := headerStyle.Render("Job Application Tracker")
+	count := countStyle.Render(fmt.Sprintf("[%d applications]", len(t.rows)))
+	gap := t.width - lipgloss.Width(title) - lipgloss.Width(count)
+	if gap < 1 {
+		gap = 1
 	}
-	b.WriteString("\n")
-	b.WriteString(strings.Repeat("─", t.width) + "\n")
+	b.WriteString(title)
+	b.WriteString(strings.Repeat(" ", gap))
+	b.WriteString(count)
+	b.WriteString("\n\n")
+
+	// ── Box rows ─────────────────────────────────────────────────────────────
+	innerWidth := t.width - 2 // subtract the two │ border chars
 
 	end := t.offset + t.rowsHeight
 	if end > len(t.rows) {
@@ -187,22 +210,47 @@ func (t *Table) View() tea.View {
 	}
 	visibleRows := end - t.offset
 
+	lines := make([]string, 0, t.rowsHeight)
 	for i, row := range t.rows[t.offset:end] {
-		style := normalStyle
-		if i+t.offset == t.cursor {
-			style = selectedStyle
+		isSelected := i+t.offset == t.cursor
+		cursor := "  "
+		if isSelected {
+			cursor = "> "
 		}
+
+		var line strings.Builder
+		line.WriteString(cursor)
 		for j, cell := range row {
-			b.WriteString(style.Width(t.cols[j].Width).Render(cell))
+			style := normalStyle
+			if isSelected {
+				style = selectedStyle
+			}
+			line.WriteString(style.Width(t.cols[j].Width).Render(cell))
+			if j < len(row)-1 {
+				sep := "| "
+				if isSelected {
+					sep = selectedStyle.Render("| ")
+				}
+				line.WriteString(sep)
+			}
 		}
-		b.WriteString("\n")
+		lines = append(lines, line.String())
+	}
+	// fill remaining visible area with blank lines
+	for range t.rowsHeight - visibleRows {
+		lines = append(lines, "")
 	}
 
-	// fill empty lines between last row and footer
-	b.WriteString(strings.Repeat("\n", t.rowsHeight-visibleRows))
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		Width(innerWidth)
 
-	helpString := "press q to quit | j/k to navigate | enter to select row"
-	b.WriteString(helpStyle.Width(t.width).Render(helpString))
+	b.WriteString(boxStyle.Render(strings.Join(lines, "\n")))
+	b.WriteString("\n\n")
+
+	// ── Help bar ─────────────────────────────────────────────────────────────
+	helpString := "j/k navigate   enter: details   n: new   q: quit"
+	b.WriteString(helpStyle.Render(helpString))
 
 	v := tea.NewView(b.String())
 	v.AltScreen = true
