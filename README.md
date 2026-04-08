@@ -31,6 +31,9 @@
 
 A terminal UI (TUI) app for tracking job applications, written in Go. Paste a job posting URL and let it automatically fill in the details for you.
 
+<img width="1134" height="739" alt="image" src="https://github.com/user-attachments/assets/2bc0aeeb-482a-48a6-a93e-e4224c948265" />
+
+
 ## Features
 
 - **TUI table view** — browse all your applications in a scrollable table right in your terminal, showing role, company, location, and status
