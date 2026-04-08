@@ -31,7 +31,7 @@
 
 A terminal UI (TUI) app for tracking job applications, written in Go. Paste a job posting URL and let it automatically fill in the details for you.
 
-<img width="1134" height="739" alt="image" src="https://github.com/user-attachments/assets/2bc0aeeb-482a-48a6-a93e-e4224c948265" />
+<img width="1161" height="638" alt="image" src="https://github.com/user-attachments/assets/11a1da4c-6415-4022-8195-3cf7f4b372e2" />
 
 
 ## Features
