@@ -67,7 +67,7 @@ A terminal UI (TUI) app for tracking job applications, written in Go. Paste a jo
 ## Prerequisites
 
 - Go 1.21+
-- [Ollama](https://ollama.com) running locally with at least one model pulled (e.g. `ollama pull llama3`)
+- [Ollama](https://ollama.com) running locally with at least one model pulled, recommended qwen2.5:7b (e.g. `ollama pull qwen2.5:7b`)
 - Chromium or Google Chrome installed (used by `chromedp` for headless scraping)
 
 ## Running
